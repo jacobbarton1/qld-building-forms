@@ -1,0 +1,15 @@
+Tomorrow's Instructions for Continuing the PDF Form Application Development:
+
+1. Convert your template.pdf to .docx format to make the form fields visible
+
+2. When you resume work, ask:
+
+"Please analyze the attached .docx template and update the application form fields to match exactly what appears in the document. Each text field, checkbox, or dropdown in the template should correspond to exactly one input field in the application."
+
+3. You can also specifically ask:
+
+"Please update the form fields in src/main.py to match the exact editable fields in this template. I want each field in the document to have exactly one corresponding input in the app, with matching names and purposes."
+
+4. When you share the .docx file, I'll be able to see the exact structure and update the application's form fields accordingly.
+
+5. Remember that all current application functionality (defaults.json, PDF generation, JSON save/load, global details, etc.) will be preserved - I'll just be updating the specific form fields to match your template.
