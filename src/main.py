@@ -19,7 +19,7 @@ class InspectionFormApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Inspection Form Application")
-        self.root.geometry("900x700")
+        self.root.geometry("1100x800")  # Wider window to accommodate browse buttons
         
         # Variables to track file paths
         self.current_json_path = None
@@ -151,7 +151,7 @@ class InspectionFormApp:
             
             # Section 9
             ("header9", "header", "9. Signature of appointed competent person"),
-            ("Signature", "text"),
+            ("Signature Image Path", "file"),  # Changed to file type
             ("Date (signature)", "text"),
         ]
 
@@ -181,6 +181,17 @@ class InspectionFormApp:
                         btn = ttk.Button(scrollable_frame, text="+", width=3,
                                        command=lambda l=label: self.select_global_detail(l))
                         btn.grid(row=current_row, column=2, padx=(5, 0), pady=2)
+
+                elif field_type == "file":
+                    # Create entry field for file path
+                    entry = ttk.Entry(scrollable_frame, width=60)
+                    entry.grid(row=current_row, column=1, sticky="ew", pady=2)
+                    self.form_fields[label] = entry
+
+                    # Create browse button
+                    btn = ttk.Button(scrollable_frame, text="Browse", width=7,
+                                   command=lambda l=label, e=entry: self.browse_file(l, e))
+                    btn.grid(row=current_row, column=2, padx=(5, 0), pady=2)
 
                 current_row += 1
                 
@@ -386,7 +397,7 @@ class InspectionFormApp:
         """
         # Get form data
         form_data = self.get_form_data()
-        
+
         # Determine output file path
         if self.current_json_path:
             # Suggest DOCX name based on JSON file name
@@ -398,7 +409,7 @@ class InspectionFormApp:
             if not project_name:
                 project_name = form_data.get("Street address", "inspection_form")
             suggested_docx_path = f"{project_name}.docx"
-        
+
         # Ask user for output file location
         output_path = filedialog.asksaveasfilename(
             defaultextension=".docx",
@@ -406,39 +417,61 @@ class InspectionFormApp:
             initialfile=os.path.basename(suggested_docx_path),
             initialdir=os.path.dirname(suggested_docx_path) if os.path.dirname(suggested_docx_path) != '' else None
         )
-        
+
         if not output_path:
             return  # User cancelled
-        
+
         try:
             # Create a new document based on the template
             doc = Document('template.docx')
-            
-            # Replace placeholders with actual data
-            # For now, I'll add the form data at the end of the document
-            # In a real implementation, you'd want to search for specific placeholders in the template
+
+            # Extract the signature file path
+            signature_path = form_data.get("Signature Image Path", "").strip()
+
+            # Add signature image if provided
+            if signature_path and os.path.exists(signature_path):
+                # Add a paragraph break before signature section
+                doc.add_paragraph()
+
+                # Add a heading for signature section
+                doc.add_paragraph("Signature Section:", style='Heading 1')
+
+                # Add the signature image
+                paragraph = doc.add_paragraph()
+                run = paragraph.add_run()
+
+                # Insert the signature image, scaled appropriately
+                from docx.shared import Inches
+                try:
+                    run.add_picture(signature_path, width=Inches(2))  # Scale to 2 inches width
+                except Exception as img_error:
+                    # If image can't be added, add an error message
+                    doc.add_paragraph(f"Could not add signature image: {img_error}")
+
+            # Add the form data as text
             doc.add_paragraph()
             doc.add_paragraph("FILLED FORM DATA:", style='Heading 1')
-            
+
+            # Add all form data except the signature path (since we handled it separately)
             for field_name, value in form_data.items():
-                if value.strip():  # Only add non-empty values
+                if field_name != "Signature Image Path" and value.strip():  # Only add non-empty values except signature path
                     doc.add_paragraph(f"{field_name}: {value}")
-            
+
             # Save the document
             doc.save(output_path)
-            
+
             # Create corresponding JSON file
             json_output_path = os.path.splitext(output_path)[0] + ".json"
             with open(json_output_path, 'w') as f:
                 json.dump(form_data, f, indent=2)
-                
+
             # Update current paths
             self.current_docx_path = output_path
             self.current_json_path = json_output_path
-            
+
             self.status_var.set(f"DOCX generated successfully: {output_path}")
             messagebox.showinfo("Success", f"DOCX generated successfully:\n{output_path}")
-            
+
         except Exception as e:
             self.status_var.set(f"Error generating DOCX: {str(e)}")
             messagebox.showerror("Error", f"Error generating DOCX:\n{str(e)}")
@@ -500,6 +533,24 @@ class InspectionFormApp:
         
         self.status_var.set("Form reset to defaults")
     
+    def browse_file(self, field_name, entry_widget):
+        """
+        Open a file dialog to browse for a signature image
+        """
+        file_path = filedialog.askopenfilename(
+            title="Select Signature Image",
+            filetypes=[
+                ("Image files", "*.png *.jpg *.jpeg *.gif *.bmp"),
+                ("PNG files", "*.png"),
+                ("JPEG files", "*.jpg *.jpeg"),
+                ("All files", "*.*")
+            ]
+        )
+
+        if file_path:
+            entry_widget.delete(0, tk.END)
+            entry_widget.insert(0, file_path)
+
     def select_global_detail(self, field_name):
         """
         Open a dialog to select from global details
@@ -511,26 +562,26 @@ class InspectionFormApp:
             detail_type = "appointed_competent_person"
         else:
             return  # Not a valid field for global details
-            
+
         # Create selection dialog
         dialog = tk.Toplevel(self.root)
         dialog.title(f"Select {detail_type.replace('_', ' ').title()}")
         dialog.geometry("500x300")
         dialog.transient(self.root)
         dialog.grab_set()
-        
+
         # Create listbox with available details
         listbox = tk.Listbox(dialog)
         listbox.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
+
         # Add available details to listbox
         for detail in self.global_details[detail_type]:
             listbox.insert(tk.END, detail.get("name", "") + " - " + detail.get("contact", ""))
-        
+
         # Add buttons
         button_frame = ttk.Frame(dialog)
         button_frame.pack(fill=tk.X, padx=10, pady=(0, 10))
-        
+
         def select_detail():
             selection = listbox.curselection()
             if selection:
@@ -546,14 +597,14 @@ class InspectionFormApp:
                     self.form_fields[field_name].delete(0, tk.END)
                     self.form_fields[field_name].insert(0, selected_detail.get("contact", ""))
                 dialog.destroy()
-        
+
         def add_new():
             # For now, just close the dialog to allow manual entry
             dialog.destroy()
-        
+
         ttk.Button(button_frame, text="Select", command=select_detail).pack(side=tk.LEFT, padx=(0, 5))
         ttk.Button(button_frame, text="Cancel", command=dialog.destroy).pack(side=tk.LEFT)
-        
+
         # Center the dialog
         dialog.update_idletasks()
         x = self.root.winfo_x() + (self.root.winfo_width() // 2) - (dialog.winfo_width() // 2)

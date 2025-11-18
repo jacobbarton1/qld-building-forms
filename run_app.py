@@ -18,6 +18,7 @@ def main():
         print("Starting Inspection Form Application...")
         print("The application now generates DOCX files from your template.")
         print("Make sure template.docx is in the root directory.")
+        print("Application window size optimized for 14\" MacBook Air: 1100x800.")
         print("If you see a GUI window, the application has started successfully.")
         print("Close the window to exit the application.")
         app_main()
