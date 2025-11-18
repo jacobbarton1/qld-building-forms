@@ -117,15 +117,15 @@ class InspectionFormApp:
             
             # Section 4
             ("header4", "header", "4. Description of the extent of aspect/s certified"),
-            ("Description of the extent of aspect/s certified", "text"),
-            
+            ("Description of the extent of aspect/s certified", "textarea"),
+
             # Section 5
             ("header5", "header", "5. Basis of certification"),
-            ("Basis of certification", "text"),
-            
+            ("Basis of certification", "textarea"),
+
             # Section 6
             ("header6", "header", "6. Reference documentation"),
-            ("Reference documentation", "text"),
+            ("Reference documentation", "textarea"),
             
             # Section 7
             ("header7", "header", "7. Building certifier reference number and building development approval number"),
@@ -181,6 +181,17 @@ class InspectionFormApp:
                         btn = ttk.Button(scrollable_frame, text="+", width=3,
                                        command=lambda l=label: self.select_global_detail(l))
                         btn.grid(row=current_row, column=2, padx=(5, 0), pady=2)
+
+                elif field_type == "textarea":
+                    # Create text widget for multiline input
+                    text_widget = tk.Text(scrollable_frame, width=60, height=4, wrap=tk.WORD)
+                    text_widget.grid(row=current_row, column=1, sticky="ew", pady=2)
+                    self.form_fields[label] = text_widget
+
+                    # Add scrollbar for the text widget
+                    text_scrollbar = ttk.Scrollbar(scrollable_frame, orient="vertical", command=text_widget.yview)
+                    text_scrollbar.grid(row=current_row, column=2, sticky="ns", padx=(5, 0), pady=2)
+                    text_widget.config(yscrollcommand=text_scrollbar.set)
 
                 elif field_type == "file":
                     # Create entry field for file path
@@ -256,8 +267,18 @@ class InspectionFormApp:
                 # Apply defaults to form fields
                 for field_name, default_value in defaults.items():
                     if field_name in self.form_fields:
-                        self.form_fields[field_name].delete(0, tk.END)
-                        self.form_fields[field_name].insert(0, default_value)
+                        widget = self.form_fields[field_name]
+                        if isinstance(widget, tk.Text):
+                            # For text widgets (text areas), we need to insert differently
+                            widget.delete("1.0", tk.END)
+                            widget.insert("1.0", default_value)
+                        elif isinstance(widget, tk.Entry):
+                            widget.delete(0, tk.END)
+                            widget.insert(0, default_value)
+                        else:
+                            if hasattr(widget, 'delete') and hasattr(widget, 'insert'):
+                                widget.delete(0, tk.END)
+                                widget.insert(0, default_value)
                         
             except Exception as e:
                 print(f"Error loading defaults: {e}")
@@ -496,8 +517,18 @@ class InspectionFormApp:
             # Populate form fields with loaded data
             for field_name, value in form_data.items():
                 if field_name in self.form_fields:
-                    self.form_fields[field_name].delete(0, tk.END)
-                    self.form_fields[field_name].insert(0, value)
+                    widget = self.form_fields[field_name]
+                    if isinstance(widget, tk.Text):
+                        # For text widgets (text areas), we need to insert differently
+                        widget.delete("1.0", tk.END)
+                        widget.insert("1.0", value)
+                    elif isinstance(widget, tk.Entry):
+                        widget.delete(0, tk.END)
+                        widget.insert(0, value)
+                    else:
+                        if hasattr(widget, 'delete') and hasattr(widget, 'insert'):
+                            widget.delete(0, tk.END)
+                            widget.insert(0, value)
             
             # Update current path
             self.current_json_path = file_path
@@ -517,20 +548,34 @@ class InspectionFormApp:
         Get current form data as a dictionary
         """
         form_data = {}
-        for field_name, entry_widget in self.form_fields.items():
-            form_data[field_name] = entry_widget.get()
+        for field_name, widget in self.form_fields.items():
+            if isinstance(widget, tk.Text):
+                # For text widgets (text areas), we need to get content differently
+                value = widget.get("1.0", tk.END).strip()  # Get from start to end, then strip trailing newline
+            elif isinstance(widget, tk.Entry):
+                value = widget.get()
+            else:
+                value = widget.get() if hasattr(widget, 'get') else str(widget)
+            form_data[field_name] = value
         return form_data
 
     def reset_form(self):
         """
         Reset all form fields to empty or default values
         """
-        for field_name, entry_widget in self.form_fields.items():
-            entry_widget.delete(0, tk.END)
-        
+        for field_name, widget in self.form_fields.items():
+            if isinstance(widget, tk.Text):
+                # For text widgets (text areas), we need to delete differently
+                widget.delete("1.0", tk.END)
+            elif isinstance(widget, tk.Entry):
+                widget.delete(0, tk.END)
+            else:
+                if hasattr(widget, 'delete'):
+                    widget.delete(0, tk.END)
+
         # Reload defaults
         self.load_defaults()
-        
+
         self.status_var.set("Form reset to defaults")
     
     def browse_file(self, field_name, entry_widget):
