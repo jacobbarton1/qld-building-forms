@@ -350,9 +350,26 @@ class InspectionFormApp:
                 existing_detail.get("approval_number", "") == detail.get("approval_number", "")):
                 is_duplicate = True
                 break
-        
+
         if not is_duplicate:
-            self.global_details[detail_type].append(detail)
+            # For appointed competent person, we'll update with new information if name/approval number match
+            if detail_type == "appointed_competent_person":
+                # Find if there's an existing record with same name/approval number to update
+                updated_existing = False
+                for i, existing_detail in enumerate(self.global_details[detail_type]):
+                    if (existing_detail.get("name", "") == detail.get("name", "") and
+                        existing_detail.get("approval_number", "") == detail.get("approval_number", "")):
+                        # Update the existing record with new information
+                        self.global_details[detail_type][i].update(detail)
+                        updated_existing = True
+                        break
+
+                if not updated_existing:
+                    self.global_details[detail_type].append(detail)
+            else:
+                # For building certifier, just add if not duplicate
+                self.global_details[detail_type].append(detail)
+
             self.save_global_details()
     
     def check_and_add_to_global_details(self, form_data):
@@ -365,17 +382,23 @@ class InspectionFormApp:
             "contact": form_data.get("Building certifier reference number", ""),
             "approval_number": form_data.get("Building development approval number", "")
         }
-        
+
         if certifier_data["name"] or certifier_data["contact"] or certifier_data["approval_number"]:
             self.add_to_global_details("building_certifier", certifier_data)
-        
+
         # Check if there's new appointed competent person data
         person_data = {
             "name": form_data.get("Appointed competent person name (in full)", ""),
             "contact": form_data.get("Email address", ""),
-            "approval_number": form_data.get("Licence class or registration number (if applicable)", "")
+            "approval_number": form_data.get("Licence class or registration number (if applicable)", ""),
+            "business_phone": form_data.get("Business phone number", ""),
+            "mobile": form_data.get("Mobile", ""),
+            "postal_address": form_data.get("Postal address", ""),
+            "postal_suburb": form_data.get("Suburb/locality (postal)", ""),
+            "postal_state": form_data.get("State (postal)", ""),
+            "postal_postcode": form_data.get("Postcode (postal)", "")
         }
-        
+
         if person_data["name"] or person_data["contact"] or person_data["approval_number"]:
             self.add_to_global_details("appointed_competent_person", person_data)
 
