@@ -157,6 +157,7 @@ final_test_*.docx
 # Project-specific generated files
 186 King Street Charleville.docx
 186 King Street Charleville.json
+jrb-template.docx
 
 # Generated JSON files
 *_generated.json
