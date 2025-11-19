@@ -1,4 +1,16 @@
 {
-  "building_certifier": [],
-  "appointed_competent_person": []
+  "building_certifier": [
+    {
+      "name": "Kevin Mizen",
+      "contact": "A1160915",
+      "approval_number": "BA7860"
+    }
+  ],
+  "appointed_competent_person": [
+    {
+      "name": "Jacob Ross Barton",
+      "contact": "jacob_barton@murweh.qld.gov.au",
+      "approval_number": "#14310"
+    }
+  ]
 }

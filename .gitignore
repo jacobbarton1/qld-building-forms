@@ -141,3 +141,14 @@ ehthumbs.db
 *:2e:$DATA
 *:2e:$EA_INFORMATION
 *:2e:$PROPERTY_DATA
+
+# Test files
+test_*.docx
+troubleshoot_*.docx
+final_test_*.docx
+*_output.docx
+*_replacement.docx
+
+# Generated JSON files
+*_generated.json
+*_filled.json

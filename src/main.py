@@ -449,34 +449,54 @@ class InspectionFormApp:
             # Extract the signature file path
             signature_path = form_data.get("Signature Image Path", "").strip()
 
-            # Add signature image if provided
+            # Replace placeholders in the document with form data
+            # Process all paragraphs in the document
+            for paragraph in doc.paragraphs:
+                for field_name, value in form_data.items():
+                    if value.strip():
+                        # Check if the placeholder exists in the paragraph text
+                        placeholder = f"<<{field_name}>>"
+                        if placeholder in paragraph.text:
+                            # Replace the placeholder with the actual value
+                            paragraph.text = paragraph.text.replace(placeholder, value)
+
+            # Also check in table cells (this is where most placeholders are based on our analysis)
+            for table in doc.tables:
+                for row in table.rows:
+                    for cell in row.cells:
+                        for paragraph in cell.paragraphs:
+                            for field_name, value in form_data.items():
+                                if value.strip():
+                                    # Check if the placeholder exists in the paragraph text
+                                    placeholder = f"<<{field_name}>>"
+                                    if placeholder in paragraph.text:
+                                        # Replace the placeholder with the actual value
+                                        paragraph.text = paragraph.text.replace(placeholder, value)
+
+            # Handle signature image separately since it needs special processing
             if signature_path and os.path.exists(signature_path):
-                # Add a paragraph break before signature section
-                doc.add_paragraph()
+                # Find the signature and date placeholders in Table 9
+                for table in doc.tables:
+                    for row in table.rows:
+                        for cell_idx, cell in enumerate(row.cells):
+                            # Check paragraphs in the cell for the signature placeholder
+                            for paragraph in cell.paragraphs:
+                                if "<<Signature Image Path>>" in paragraph.text:
+                                    # Clear the paragraph that contains the placeholder
+                                    paragraph.text = ""  # Clear the placeholder text
 
-                # Add a heading for signature section
-                doc.add_paragraph("Signature Section:", style='Heading 1')
+                                    # Add signature image
+                                    from docx.shared import Inches
+                                    try:
+                                        run = paragraph.add_run()
+                                        run.add_picture(signature_path, width=Inches(2))
+                                    except Exception as img_error:
+                                        paragraph.text = f"Signature Image Error: {img_error}"
 
-                # Add the signature image
-                paragraph = doc.add_paragraph()
-                run = paragraph.add_run()
-
-                # Insert the signature image, scaled appropriately
-                from docx.shared import Inches
-                try:
-                    run.add_picture(signature_path, width=Inches(2))  # Scale to 2 inches width
-                except Exception as img_error:
-                    # If image can't be added, add an error message
-                    doc.add_paragraph(f"Could not add signature image: {img_error}")
-
-            # Add the form data as text
-            doc.add_paragraph()
-            doc.add_paragraph("FILLED FORM DATA:", style='Heading 1')
-
-            # Add all form data except the signature path (since we handled it separately)
-            for field_name, value in form_data.items():
-                if field_name != "Signature Image Path" and value.strip():  # Only add non-empty values except signature path
-                    doc.add_paragraph(f"{field_name}: {value}")
+                                if "<<Date (signature)>>" in paragraph.text:
+                                    # Replace with actual date from form data
+                                    date_value = form_data.get("Date (signature)", "")
+                                    paragraph.text = date_value
 
             # Save the document
             doc.save(output_path)
