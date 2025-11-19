@@ -149,6 +149,15 @@ final_test_*.docx
 *_output.docx
 *_replacement.docx
 
+# Generated output files
+*_generated.docx
+*_filled.docx
+*_troubleshoot.docx
+
+# Project-specific generated files
+186 King Street Charleville.docx
+186 King Street Charleville.json
+
 # Generated JSON files
 *_generated.json
 *_filled.json
