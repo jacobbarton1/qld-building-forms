@@ -475,28 +475,29 @@ class InspectionFormApp:
 
             # Handle signature image separately since it needs special processing
             if signature_path and os.path.exists(signature_path):
-                # Find the signature and date placeholders in Table 9
-                for table in doc.tables:
-                    for row in table.rows:
-                        for cell_idx, cell in enumerate(row.cells):
-                            # Check paragraphs in the cell for the signature placeholder
-                            for paragraph in cell.paragraphs:
-                                if "<<Signature Image Path>>" in paragraph.text:
-                                    # Clear the paragraph that contains the placeholder
-                                    paragraph.text = ""  # Clear the placeholder text
+                # Find the signature and date placeholders specifically in Table 9 (signature table)
+                for table_idx, table in enumerate(doc.tables):
+                    if table_idx == 8:  # Table 9 (0-indexed as 8) is the signature table
+                        for row in table.rows:
+                            for cell_idx, cell in enumerate(row.cells):
+                                for paragraph in cell.paragraphs:
+                                    original_text = paragraph.text
+                                    if "<<Signature Image Path>>" in original_text:
+                                        # Clear the paragraph content and add signature image
+                                        paragraph.clear()  # Clear existing content
 
-                                    # Add signature image
-                                    from docx.shared import Inches
-                                    try:
-                                        run = paragraph.add_run()
-                                        run.add_picture(signature_path, width=Inches(2))
-                                    except Exception as img_error:
-                                        paragraph.text = f"Signature Image Error: {img_error}"
+                                        # Add signature image
+                                        from docx.shared import Inches
+                                        try:
+                                            run = paragraph.add_run()
+                                            run.add_picture(signature_path, width=Inches(2))
+                                        except Exception as img_error:
+                                            paragraph.text = f"Signature Image Error: {img_error}"
 
-                                if "<<Date (signature)>>" in paragraph.text:
-                                    # Replace with actual date from form data
-                                    date_value = form_data.get("Date (signature)", "")
-                                    paragraph.text = date_value
+                                    if "<<Date (signature)>>" in paragraph.text:
+                                        # Replace with actual date from form data
+                                        date_value = form_data.get("Date (signature)", "")
+                                        paragraph.text = date_value
 
             # Save the document
             doc.save(output_path)
