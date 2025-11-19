@@ -15,11 +15,12 @@ class InspectionFormApp:
     Provides a GUI for filling out inspection forms with save/load functionality.
     Now generates DOCX files instead of PDFs for better compatibility with the template.
     """
-    
-    def __init__(self, root):
+
+    def __init__(self, root, template_path='template.docx'):
         self.root = root
         self.root.title("Inspection Form Application")
         self.root.geometry("1100x800")  # Wider window to accommodate browse buttons
+        self.template_path = template_path
         
         # Variables to track file paths
         self.current_json_path = None
@@ -150,8 +151,8 @@ class InspectionFormApp:
             ("Date request to inspect received from building certifier", "text"),
             
             # Section 9
-            ("header9", "header", "9. Signature of appointed competent person"),
-            ("Signature Image Path", "file"),  # Changed to file type
+            ("header9", "header", "9. Signature of appointed competent person (Manual Signature Required)"),
+            ("Signature (Manual)", "disabled_text"),
             ("Date (signature)", "text"),
         ]
 
@@ -203,6 +204,19 @@ class InspectionFormApp:
                     btn = ttk.Button(scrollable_frame, text="Browse", width=7,
                                    command=lambda l=label, e=entry: self.browse_file(l, e))
                     btn.grid(row=current_row, column=2, padx=(5, 0), pady=2)
+
+                elif field_type == "disabled_text":
+                    # Create a disabled text entry field
+                    entry = ttk.Entry(scrollable_frame, width=60)
+                    entry.grid(row=current_row, column=1, sticky="ew", pady=2)
+                    entry.insert(0, "Manual signature required - please sign document after generation")
+                    entry.config(state="disabled")
+                    self.form_fields[label] = entry
+
+                    # Add an informational button
+                    info_btn = ttk.Button(scrollable_frame, text="Info", width=7,
+                                        command=lambda: self.show_signature_info())
+                    info_btn.grid(row=current_row, column=2, padx=(5, 0), pady=2)
 
                 current_row += 1
                 
@@ -319,7 +333,6 @@ class InspectionFormApp:
             "Licence class or registration type (if applicable)": "",
             "Licence class or registration number (if applicable)": "",
             "Date request to inspect received from building certifier": datetime.now().strftime("%Y-%m-%d"),
-            "Signature": "",
             "Date (signature)": datetime.now().strftime("%Y-%m-%d"),
         }
         
@@ -444,7 +457,7 @@ class InspectionFormApp:
 
         try:
             # Create a new document based on the template
-            doc = Document('template.docx')
+            doc = Document(self.template_path)
 
             # Extract the signature file path
             signature_path = form_data.get("Signature Image Path", "").strip()
@@ -473,31 +486,17 @@ class InspectionFormApp:
                                         # Replace the placeholder with the actual value
                                         paragraph.text = paragraph.text.replace(placeholder, value)
 
-            # Handle signature image separately since it needs special processing
-            if signature_path and os.path.exists(signature_path):
-                # Find the signature and date placeholders specifically in Table 9 (signature table)
-                for table_idx, table in enumerate(doc.tables):
-                    if table_idx == 8:  # Table 9 (0-indexed as 8) is the signature table
-                        for row in table.rows:
-                            for cell_idx, cell in enumerate(row.cells):
-                                for paragraph in cell.paragraphs:
-                                    original_text = paragraph.text
-                                    if "<<Signature Image Path>>" in original_text:
-                                        # Clear the paragraph content and add signature image
-                                        paragraph.clear()  # Clear existing content
-
-                                        # Add signature image
-                                        from docx.shared import Inches
-                                        try:
-                                            run = paragraph.add_run()
-                                            run.add_picture(signature_path, width=Inches(2))
-                                        except Exception as img_error:
-                                            paragraph.text = f"Signature Image Error: {img_error}"
-
-                                    if "<<Date (signature)>>" in paragraph.text:
-                                        # Replace with actual date from form data
-                                        date_value = form_data.get("Date (signature)", "")
-                                        paragraph.text = date_value
+            # Handle signature section - since it's manual now, we just update the date
+            # Find the date placeholder in Table 9 (signature table)
+            for table_idx, table in enumerate(doc.tables):
+                if table_idx == 8:  # Table 9 (0-indexed as 8) is the signature table
+                    for row in table.rows:
+                        for cell_idx, cell in enumerate(row.cells):
+                            for paragraph in cell.paragraphs:
+                                if "<<Date (signature)>>" in paragraph.text:
+                                    # Replace with actual date from form data
+                                    date_value = form_data.get("Date (signature)", "")
+                                    paragraph.text = date_value
 
             # Save the document
             doc.save(output_path)
@@ -570,6 +569,8 @@ class InspectionFormApp:
         """
         form_data = {}
         for field_name, widget in self.form_fields.items():
+            if field_name == "Signature (Manual)":  # Skip the manual signature field
+                continue
             if isinstance(widget, tk.Text):
                 # For text widgets (text areas), we need to get content differently
                 value = widget.get("1.0", tk.END).strip()  # Get from start to end, then strip trailing newline
@@ -677,9 +678,36 @@ class InspectionFormApp:
         y = self.root.winfo_y() + (self.root.winfo_height() // 2) - (dialog.winfo_height() // 2)
         dialog.geometry(f"+{x}+{y}")
 
+    def show_signature_info(self):
+        """
+        Show information about manual signature requirement
+        """
+        info_text = (
+            "Manual Signature Required:\n\n"
+            "This form requires a manual signature after DOCX generation.\n"
+            "The signature field is intentionally disabled to allow for\n"
+            "secure handling of signature images separate from the application.\n\n"
+            "After generating the document, please add your signature\n"
+            "to the generated DOCX file manually."
+        )
+        messagebox.showinfo("Signature Information", info_text)
+
 def main():
+    import argparse
+    import sys
+
+    # Set up argument parser
+    parser = argparse.ArgumentParser(description='QLD Building Forms Application')
+    parser.add_argument('--template', type=str, help='Path to alternate template.docx file')
+
+    args = parser.parse_args()
+
+    # Use provided template or default
+    template_path = args.template if args.template else 'template.docx'
+
+    # Add the template path to the application instance
     root = tk.Tk()
-    app = InspectionFormApp(root)
+    app = InspectionFormApp(root, template_path=template_path)
     root.mainloop()
 
 if __name__ == "__main__":
