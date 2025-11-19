@@ -142,23 +142,25 @@ ehthumbs.db
 *:2e:$EA_INFORMATION
 *:2e:$PROPERTY_DATA
 
-# Test files
-test_*.docx
-troubleshoot_*.docx
-final_test_*.docx
-*_output.docx
-*_replacement.docx
-
-# Generated output files
-*_generated.docx
-*_filled.docx
-*_troubleshoot.docx
-
 # Project-specific generated files
 186 King Street Charleville.docx
 186 King Street Charleville.json
 jrb-template.docx
 
+# Generated output files (excluding template)
+*_output.docx
+*_replacement.docx
+*_generated.docx
+*_filled.docx
+*_troubleshoot.docx
+
 # Generated JSON files
 *_generated.json
 *_filled.json
+
+# Inspections directories containing sensitive project data
+Form12 Inspections/
+Inspections/
+
+# Command files
+app.command
