@@ -9,8 +9,17 @@
   "appointed_competent_person": [
     {
       "name": "Jacob Ross Barton",
-      "contact": "jacob_barton@murweh.qld.gov.au",
-      "approval_number": "#14310"
+      "company": "Murweh Shire Council",
+      "contact_person": "Jacob Barton",
+      "business_phone": "0746568330",
+      "mobile": "0476755014",
+      "email": "jacob_barton@murweh.qld.gov.au",
+      "postal_address": "95-101 Alfred Street",
+      "postal_suburb": "Charleville",
+      "postal_state": "QLD",
+      "postal_postcode": "4470",
+      "licence_type": "RPEQ",
+      "licence_number": "#14310"
     }
   ]
 }
